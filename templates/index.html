@@ -3,35 +3,41 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Music Recommendation App</title>
-    <!-- Add the Bootstrap CSS CDN link -->
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/5.0.0-beta1/css/bootstrap.min.css" integrity="sha384-pzjw8f+ua7Kw1TIq0v8FqFjcJ6pajs/rfdfs3SO+kD4Ck5BdPtF+to8xMp9Q9i7I" crossorigin="anonymous">
+    <title>Music Recommendation</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 </head>
 <body>
-    <div class="container">
-        <div class="row">
-            <div class="col-md-8 offset-md-2">
-                <h1 class="text-center mt-5">Music Recommendation App</h1>
-                <form action="{{ url_for('recommend') }}" method="post" class="mt-4">
-                    <div class="mb-3">
-                        <label for="genres" class="form-label">Select Your Favorite Genres:</label>
-                        <select name="genres" id="genres" class="form-select" multiple>
-                            {% for genre in genre_data %}
-                                <option value="{{ genre.name }}">{{ genre.name }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="d-grid gap-2">
-                        <button type="submit" class="btn btn-primary">Get Recommendations</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-
-    <!-- Add the Bootstrap JS CDN links -->
-    <script src="https://code.jquery.com/jquery-3.6.0.slim.min.js" integrity="sha384-KyZXEAg3QhqLMpG8r+Knujsl7/6en8XCp+HHAAK5GSLf2xlYtvJ8U2Q4U+9cuEnJ" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.3/dist/umd/popper.min.js" integrity="sha384-eMNCOe7tC1doHpGoJtKh7z7lGz7fuP4F8nfdFvAOA6Gg/z6Y5J6XqqyGXYM2ntX5" crossorigin="anonymous"></script>
-    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/5.0.0-beta1/js/bootstrap.min.js" integrity="sha384-pzjw8f+ua7Kw1TIq0v8FqFjcJ6pajs/rfdfs3SO+kD4Ck5BdPtF+to8xMp9Q9i7I" crossorigin="anonymous"></script>
+    <h1>Music Recommendation</h1>
+    <form action="{{ url_for('add_song') }}" method="post">
+        <label for="song">Song:</label>
+        <input type="text" name="song" id="song" required>
+        <br>
+        <label for="artist">Artist:</label>
+        <input type="text" name="artist" id="artist" required>
+        <br>
+        <input type="submit" value="Add song">
+    </form>
+    
+    <form action="/delete_tag" method="POST">
+        <label for="tag">Delete a tag:</label>
+        <select name="tag" id="tag">
+            {% for tag in tags %}
+                <option value="{{ tag }}">{{ tag }}</option>
+            {% endfor %}
+        </select>
+        <button type="submit">Delete</button>
+    </form>
+    <h2>Current Tags:</h2>
+    <ul>
+        {% for tag in tags %}
+            <li>{{ tag }}</li>
+        {% endfor %}
+    </ul>
+    <h2>Recommendations:</h2>
+    <ul>
+        {% for recommendation in recommendations %}
+            <li>{{ recommendation }}</li>
+        {% endfor %}
+    </ul>
 </body>
 </html>
