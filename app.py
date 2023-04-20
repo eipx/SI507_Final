@@ -92,7 +92,7 @@ def register():
         if os.path.exists(os.path.join(DATA_FOLDER, f"{username}.json")):
             return "Username already exists"
 
-        user_data = {"password": hashed_password, "tags": []}
+        user_data = {"password": hashed_password}
         save_user_data(username, user_data)
         session["username"] = username
         return redirect(url_for("index"))
