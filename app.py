@@ -3,19 +3,33 @@ import json
 import os
 import hashlib
 from music_graph import MusicGraph, API_KEY
+import pickle
 
 app = Flask(__name__)
 app.secret_key = 'super secret key'
 DATA_FOLDER = "user_data"
 
+def load_graph_data(username):
+    graph_file = os.path.join(DATA_FOLDER, f"{username}_graph.json")
+    if not os.path.exists(graph_file):
+        return None
+    with open(graph_file, 'r') as f:
+        graph_data = json.load(f)
+    return MusicGraph.from_dict(graph_data)
+
+def save_graph_data(username, graph):
+    graph_file = os.path.join(DATA_FOLDER, f"{username}_graph.json")
+    with open(graph_file, 'w') as f:
+        json.dump(graph.to_dict(), f)
+
 def load_user_data(username):
     with open(os.path.join(DATA_FOLDER, f"{username}.json"), "r") as f:
         return json.load(f)
 
-
 def save_user_data(username, data):
     with open(os.path.join(DATA_FOLDER, f"{username}.json"), "w") as f:
         json.dump(data, f)
+
 
 
 @app.route("/")
@@ -24,14 +38,17 @@ def index():
         return redirect(url_for("login"))
 
     username = session["username"]
-    user_data = load_user_data(username)
-    tags = user_data["tags"]
+    
+    # Load the graph data from the session
+    graph_data = session.get("graph")
+    if not graph_data:
+        graph = MusicGraph()
+    else:
+        graph = MusicGraph.from_dict(graph_data)
+
+    tags = graph.get_tags()
     recommendations = []
 
-    if tags:
-        graph = MusicGraph(API_KEY)
-        graph.build_graph(tags)
-        recommendations = graph.recommendations(tags)
     return render_template("index.html", tags=tags, recommendations=recommendations)
 
 
@@ -48,6 +65,13 @@ def login():
 
             if user_data["password"] == hashed_password:
                 session["username"] = username
+                
+                # Load the graph data and store it in the session
+                graph = load_graph_data(username)
+                if not graph:
+                    graph = MusicGraph()
+                session["graph"] = graph.to_dict()
+                
                 return redirect(url_for("index"))
             else:
                 return "Incorrect password"
@@ -55,6 +79,7 @@ def login():
             return "User not found"
 
     return render_template("login.html")
+
 
 
 @app.route("/register", methods=["GET", "POST"])
@@ -77,8 +102,18 @@ def register():
 
 @app.route("/logout")
 def logout():
-    session.pop("username", None)
+    username = session.get("username")
+    if username:
+        # Save the graph data to a file before clearing the session
+        graph_data = session.get("graph")
+        if graph_data:
+            graph = MusicGraph.from_dict(graph_data)
+            save_graph_data(username, graph)
+        session.pop("username", None)
+
+    session.clear()
     return redirect(url_for("login"))
+
 
 
 @app.route("/add_song", methods=["POST"])
@@ -86,23 +121,27 @@ def add_song():
     if "username" not in session:
         return redirect(url_for("login"))
 
-    song_title = request.form["song_title"]
-    artist_name = request.form["artist_name"]
+    song_title = request.form["song"]
+    artist_name = request.form["artist"]
     username = session["username"]
-    user_data = load_user_data(username)
+
+    # Load the graph data from the session
+    graph_data = session.get("graph")
+    if not graph_data:
+        graph = MusicGraph()
+    else:
+        graph = MusicGraph.from_dict(graph_data)
 
     # Get the tags for the song
-    music_graph = MusicGraph(api_key)
-    tags = music_graph.get_tags_for_song(song_title, artist_name)
+    tags = graph.get_tags_for_song(song_title, artist_name)
 
-    # Add the tags to the user's data
-    for tag in tags:
-        if tag not in user_data["tags"]:
-            user_data["tags"].append(tag)
-    save_user_data(username, user_data)
+    # Update the graph with the new song's tags
+    graph.update_graph(tags)
+
+    # Save the updated graph to the session
+    session["graph"] = graph.to_dict()
 
     return redirect(url_for("index"))
-
 
 
 @app.route("/delete_tag", methods=["POST"])
@@ -112,13 +151,42 @@ def delete_tag():
 
     tag = request.form["tag"]
     username = session["username"]
-    user_data = load_user_data(username)
 
-    if tag in user_data["tags"]:
-        user_data["tags"].remove(tag)
-        save_user_data(username, user_data)
+    # Load the graph data from the session
+    graph_data = session.get("graph")
+    if not graph_data:
+        graph = MusicGraph()
+    else:
+        graph = MusicGraph.from_dict(graph_data)
+
+    graph.remove_tag(tag)
+
+    # Save the updated graph to the session
+    session["graph"] = graph.to_dict()
 
     return redirect(url_for("index"))
+
+
+@app.route("/recommend", methods=["POST"])
+def recommend():
+    if "username" not in session:
+        return redirect(url_for("login"))
+
+    chosen_tag = request.form["chosen_tag"]
+    username = session["username"]
+
+    # Load the graph data from the session
+    graph_data = session.get("graph")
+    if not graph_data:
+        graph = MusicGraph()
+    else:
+        graph = MusicGraph.from_dict(graph_data)
+
+    recommendations = graph.recommendations(chosen_tag)
+
+    tags = graph.get_tags()
+
+    return render_template("index.html", tags=tags, recommendations=recommendations)
 
 
 if __name__ == "__main__":

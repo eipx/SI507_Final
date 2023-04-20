@@ -1,77 +1,81 @@
 import requests
+from credentials import *
 from collections import defaultdict
 
-API_KEY = '0ccc3255b892733da52768a1acac1455'
-API_URL = 'http://ws.audioscrobbler.com/2.0/'
-
 class MusicGraph:
-    def __init__(self, api_key):
-        self.api_key = api_key
-        self.graph = defaultdict(set)
-        self.top_tracks_cache = {}
-        self.max_tags_per_song = 5
+    def __init__(self, max_tags_per_song=5, max_tags_total=20):
+        self.api_key = API_KEY
+        self.graph = defaultdict(dict)
+        self.max_tags_per_song = max_tags_per_song
+        self.max_tags_total = max_tags_total
+    
+    #Serizalize the graph
+    def to_dict(self):
+        return {
+            'graph': {k: dict(v) for k, v in self.graph.items()},
+            'max_tags_per_song': self.max_tags_per_song,
+            'max_tags_total': self.max_tags_total,
+        }
 
+    @classmethod
+    def from_dict(cls, data):
+        graph_obj = cls(
+            max_tags_per_song=data['max_tags_per_song'],
+            max_tags_total=data['max_tags_total']
+        )
+        graph_obj.graph = {k: dict(v) for k, v in data['graph'].items()}
+        return graph_obj
+    
     def add_tag(self, tag):
         if tag not in self.graph:
-            self.graph[tag] = set()
+            if len(self.graph) == self.max_tags_total:
+                self.remove_tag(next(iter(self.graph)))
+            self.graph[tag] = {}
 
     def remove_tag(self, tag):
+        for other_tag in self.graph:
+            if tag in self.graph[other_tag]:
+                del self.graph[other_tag][tag]
         if tag in self.graph:
             del self.graph[tag]
 
-    def add_edge(self, tag1, tag2):
+    def add_edge(self, tag1, tag2, shared_songs):
         self.add_tag(tag1)
         self.add_tag(tag2)
-        self.graph[tag1].add(tag2)
-        self.graph[tag2].add(tag1)
+        self.graph[tag1][tag2] = shared_songs
+        self.graph[tag2][tag1] = shared_songs
 
-    def get_related_tags(self, tag):
-        return self.graph.get(tag, set())
+    def get_tags(self):
+        return list(self.graph.keys())
 
-    def get_top_tracks(self, tag):
-        if tag in self.top_tracks_cache:
-            return self.top_tracks_cache[tag]
-
-        params = {
-            "method": "tag.gettoptracks",
-            "tag": tag,
-            "api_key": self.api_key,
-            "format": "json",
-        }
-        response = requests.get("http://ws.audioscrobbler.com/2.0/", params=params)
-        data = response.json()
-
-        if "error" in data:
-            print(f"Error in API response: {data['message']}")
-            return []
-
-        if "tracks" not in data:
-            print("No 'tracks' key in API response")
-            return []
-
-        top_tracks = [track["name"] for track in data["tracks"]["track"]]
-        self.top_tracks_cache[tag] = top_tracks
-        return top_tracks
-
-    # Update the add_tags method to limit the number of tags per song
-    def add_tags(self, tags):
-        if len(tags) > self.max_tags_per_song:
-            tags = tags[:self.max_tags_per_song]
-
-        for tag in tags:
+    def update_graph(self, new_tags):
+        # Add new tags and remove the oldest tags if the limit is reached
+        for tag in new_tags:
             self.add_tag(tag)
 
-    def build_graph(self, tags):
-        for tag1 in tags:
-            top_tracks1 = self.get_top_tracks(tag1)
-            for tag2 in tags:
+        # Update edges for the new tags
+        for tag1 in new_tags:
+            for tag2 in new_tags:
                 if tag1 != tag2:
-                    top_tracks2 = self.get_top_tracks(tag2)
-                    common_tracks = set(top_tracks1).intersection(set(top_tracks2))
-                    if common_tracks:
-                        self.add_edge(tag1, tag2)
+                    if tag2 in self.graph[tag1]:
+                        self.graph[tag1][tag2] += 1
+                        self.graph[tag2][tag1] += 1
+                    else:
+                        self.add_edge(tag1, tag2, 1)
 
+    def get_top_track_for_tag(self, tag):
+        url = f'http://ws.audioscrobbler.com/2.0/?method=tag.gettoptracks&tag={tag}&api_key={API_KEY}&format=json'
+        response = requests.get(url)
+        data = response.json()
+
+        if 'tracks' in data and 'track' in data['tracks'] and len(data['tracks']['track']) > 0:
+            top_track = data['tracks']['track'][0]
+            return f"{top_track['name']} by {top_track['artist']['name']}"
+        else:
+            return None
+        
     def get_tags_for_song(self, song, artist):
+        print("Currently getting tags for song")
         params = {
             "method": "track.getTopTags",
             "track": song,
@@ -81,22 +85,34 @@ class MusicGraph:
         }
         response = requests.get("http://ws.audioscrobbler.com/2.0/", params=params)
         data = response.json()
-        return [tag["name"] for tag in data["toptags"]["tag"]]
+        return [tag["name"] for tag in data["toptags"]["tag"]][:self.max_tags_per_song]
 
-    def calculate_jaccard_similarity(self, set1, set2):
-        intersection = set1.intersection(set2)
-        union = set1.union(set2)
-        return len(intersection) / len(union)
+    def dijkstra(self, start_tag):
+        unvisited = {tag: float('inf') for tag in self.graph}
+        unvisited[start_tag] = 0
+        visited = {}
 
-    def recommendations(self, user_tags, num_recommendations=5):
-        user_tags = set(user_tags)
-        tag_similarity = []
+        while unvisited:
+            current_min_tag = min(unvisited, key=unvisited.get)
+            visited[current_min_tag] = unvisited[current_min_tag]
+            del unvisited[current_min_tag]
 
-        for tag in self.graph:
-            if tag not in user_tags:
-                similarity = self.calculate_jaccard_similarity(user_tags, self.graph[tag])
-                tag_similarity.append((tag, similarity))
+            for neighbor, count in self.graph[current_min_tag].items():
+                if neighbor in visited:
+                    continue
 
-        tag_similarity.sort(key=lambda x: x[1], reverse=True)
-        recommended_tags = [tag for tag, _ in tag_similarity[:num_recommendations]]
-        return recommended_tags
+                new_distance = visited[current_min_tag] + (1 / count)
+                if new_distance < unvisited[neighbor]:
+                    unvisited[neighbor] = new_distance
+
+        return visited
+
+    def recommendations(self, chosen_tag, num_recommendations=5):
+        distances = self.dijkstra(chosen_tag)
+
+        sorted_distances = sorted(distances.items(), key=lambda x: x[1])
+        recommended_tags = [tag for tag, _ in sorted_distances[:num_recommendations]]
+        result_songs = []
+        for tag in recommended_tags:
+            result_songs.append(self.get_top_track_for_tag(tag))
+        return result_songs

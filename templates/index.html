@@ -7,6 +7,12 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 </head>
 <body>
+    <div>
+        <span>Welcome, {{ session['username'] }}</span>
+        <form action="{{ url_for('logout') }}" method="post" style="display:inline;">
+            <input type="submit" value="Logout">
+        </form>
+    </div>
     <h1>Music Recommendation</h1>
     <form action="{{ url_for('add_song') }}" method="post">
         <label for="song">Song:</label>
@@ -28,16 +34,27 @@
         <button type="submit">Delete</button>
     </form>
     <h2>Current Tags:</h2>
-    <ul>
+    <div style="display: flex; flex-wrap: wrap;">
         {% for tag in tags %}
-            <li>{{ tag }}</li>
+            <div style="margin: 5px; padding: 5px; border: 1px solid black;">{{ tag }}</div>
         {% endfor %}
-    </ul>
+    </div>
+
     <h2>Recommendations:</h2>
-    <ul>
-        {% for recommendation in recommendations %}
-            <li>{{ recommendation }}</li>
+    <form action="{{ url_for('recommend') }}" method="post">
+    <label for="chosen_tag">Choose a tag for recommendations:</label>
+    <select name="chosen_tag" id="chosen_tag">
+        {% for tag in tags %}
+            <option value="{{ tag }}">{{ tag }}</option>
         {% endfor %}
-    </ul>
+    </select>
+    <input type="submit" value="Get recommendations">
+    </form>
+
+    <div style="display: flex; flex-wrap: wrap;">
+        {% for recommendation in recommendations %}
+            <div style="margin: 5px; padding: 5px; border: 1px solid black;">{{ recommendation }}</div>
+        {% endfor %}
+    </div>
 </body>
 </html>
