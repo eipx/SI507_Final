@@ -18,6 +18,8 @@ def load_graph_data(username):
     return MusicGraph.from_dict(graph_data)
 
 def save_graph_data(username, graph):
+    if not os.path.exists(DATA_FOLDER):
+        os.makedirs(DATA_FOLDER)
     graph_file = os.path.join(DATA_FOLDER, f"{username}_graph.json")
     with open(graph_file, 'w') as f:
         json.dump(graph.to_dict(), f)
@@ -27,6 +29,8 @@ def load_user_data(username):
         return json.load(f)
 
 def save_user_data(username, data):
+    if not os.path.exists(DATA_FOLDER):
+        os.makedirs(DATA_FOLDER)
     with open(os.path.join(DATA_FOLDER, f"{username}.json"), "w") as f:
         json.dump(data, f)
 
@@ -100,7 +104,7 @@ def register():
     return render_template("register.html")
 
 
-@app.route("/logout")
+@app.route("/logout", methods=["GET", "POST"])
 def logout():
     username = session.get("username")
     if username:
