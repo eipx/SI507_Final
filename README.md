@@ -16,14 +16,14 @@ This is a music recommendation system built using Flask and Last.fm API. The sys
 
 ```bash
 pip install Flask requests
-
+```
 Usage
 
     Start the Flask app:
 
 ```bash
 python app.py
-
+```
     Open your browser and navigate to http://127.0.0.1:5000/.
 
     Register an account and log in.
