@@ -17,17 +17,17 @@ This is a music recommendation system built using Flask and Last.fm API. The sys
 ```bash
 pip install Flask requests
 ```
-Usage
+2. Usage
 
-    Start the Flask app:
+Start the Flask app:
 
 ```bash
 python app.py
 ```
-    Open your browser and navigate to http://127.0.0.1:5000/.
+Open your browser and navigate to http://127.0.0.1:5000/.
 
-    Register an account and log in.
+Register an account and log in.
 
-    Add songs to your library by entering the song title and artist name.
+Add songs to your library by entering the song title and artist name.
 
-    Get personalized music recommendations based on the tags of the songs you've added.
+Get personalized music recommendations based on the tags of the songs you've added.
