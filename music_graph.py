@@ -8,6 +8,7 @@ class MusicGraph:
         self.graph = defaultdict(dict)
         self.max_tags_per_song = max_tags_per_song
         self.max_tags_total = max_tags_total
+        self.latest_songs = []
     
     #Serizalize the graph
     def to_dict(self):
@@ -15,6 +16,7 @@ class MusicGraph:
             'graph': {k: dict(v) for k, v in self.graph.items()},
             'max_tags_per_song': self.max_tags_per_song,
             'max_tags_total': self.max_tags_total,
+            "latest_songs": self.latest_songs
         }
 
     @classmethod
@@ -24,6 +26,7 @@ class MusicGraph:
             max_tags_total=data['max_tags_total']
         )
         graph_obj.graph = {k: dict(v) for k, v in data['graph'].items()}
+        graph_obj.latest_songs = data.get("latest_songs", [])
         return graph_obj
     
     def add_tag(self, tag):
@@ -74,7 +77,14 @@ class MusicGraph:
         else:
             return None
         
+    def get_latest_songs(self):
+        return self.latest_songs
+            
     def get_tags_for_song(self, song, artist):
+        self.latest_songs.append((song, artist))
+        if len(self.latest_songs) > 5:
+            self.latest_songs.pop(0)
+
         print("Currently getting tags for song")
         params = {
             "method": "track.getTopTags",
@@ -115,4 +125,4 @@ class MusicGraph:
         result_songs = []
         for tag in recommended_tags:
             result_songs.append(self.get_top_track_for_tag(tag))
-        return result_songs
+        return result_songs, recommended_tags

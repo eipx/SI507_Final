@@ -12,7 +12,7 @@ DATA_FOLDER = "user_data"
 def load_graph_data(username):
     graph_file = os.path.join(DATA_FOLDER, f"{username}_graph.json")
     if not os.path.exists(graph_file):
-        return None
+        return MusicGraph()
     with open(graph_file, 'r') as f:
         graph_data = json.load(f)
     return MusicGraph.from_dict(graph_data)
@@ -53,7 +53,11 @@ def index():
     tags = graph.get_tags()
     recommendations = []
 
-    return render_template("index.html", tags=tags, recommendations=recommendations)
+    return render_template(
+        "index.html", 
+        tags=tags, 
+        recommendations=recommendations, 
+        latest_songs=graph.get_latest_songs())
 
 
 
@@ -186,11 +190,16 @@ def recommend():
     else:
         graph = MusicGraph.from_dict(graph_data)
 
-    recommendations = graph.recommendations(chosen_tag)
+    recommendations, top_tags = graph.recommendations(chosen_tag)
 
     tags = graph.get_tags()
 
-    return render_template("index.html", tags=tags, recommendations=recommendations)
+    return render_template(
+        "index.html", 
+        tags=tags, 
+        recommendations=recommendations, 
+        top_tags=top_tags, 
+        latest_songs=graph.get_latest_songs())
 
 
 

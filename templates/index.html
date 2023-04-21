@@ -8,11 +8,29 @@
 </head>
 <body>
     <div>
-        <span>Welcome, {{ session['username'] }}</span>
+        <span><h1>Welcome, {{ session['username'] }}</h1></span>
         <form action="{{ url_for('logout') }}" method="post" style="display:inline;">
             <input type="submit" value="Logout">
         </form>
     </div>
+    <!-- Display the latest 5 input songs -->
+    <h2>Latest Input Songs</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Song</th>
+                <th>Artist</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for song, artist in latest_songs %}
+                <tr>
+                    <td>{{ song }}</td>
+                    <td>{{ artist }}</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
     <h1>Music Recommendation</h1>
     <form action="{{ url_for('add_song') }}" method="post">
         <label for="song">Song:</label>
@@ -40,17 +58,28 @@
         {% endfor %}
     </div>
 
-    <h2>Recommendations:</h2>
-    <form action="{{ url_for('recommend') }}" method="post">
-    <label for="chosen_tag">Choose a tag for recommendations:</label>
-    <select name="chosen_tag" id="chosen_tag">
-        {% for tag in tags %}
-            <option value="{{ tag }}">{{ tag }}</option>
-        {% endfor %}
-    </select>
-    <input type="submit" value="Get recommendations">
-    </form>
 
+
+    <h2>Recommendations:</h2>
+    <div style="width: 100%;">
+        <form action="{{ url_for('recommend') }}" method="post" class="recommendations-form">
+            <label for="chosen_tag">Choose a tag for centralized recommendations:</label>
+            <select name="chosen_tag" id="chosen_tag">
+                {% for tag in tags %}
+                    <option value="{{ tag }}">{{ tag }}</option>
+                {% endfor %}
+            </select>
+            <input type="submit" value="Get recommendations">
+        </form>
+    </div>
+
+    <h4>Top Tags:</h4>
+    <div style="display: flex; flex-wrap: wrap;">
+        {% for tag in top_tags %}
+            <div style="margin: 5px; padding: 5px; border: 1px solid black;">{{ tag }}</div>
+        {% endfor %}
+    </div>
+    <h4>Top Recommendations:</h4>
     <div style="display: flex; flex-wrap: wrap;">
         {% for recommendation in recommendations %}
             <div style="margin: 5px; padding: 5px; border: 1px solid black;">{{ recommendation }}</div>

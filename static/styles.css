@@ -42,3 +42,20 @@ label {
 form {
     margin: 20px 0;
 }
+
+.recommendations-form {
+    display: flex;
+    align-items: center;
+}
+
+.recommendations-form label {
+    display: inline;
+    width: auto;
+    text-align: left;
+    margin-right: 10px;
+}
+
+.recommendations-form select,
+.recommendations-form input {
+    margin-right: 10px;
+}
