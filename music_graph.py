@@ -52,6 +52,8 @@ class MusicGraph:
         return list(self.graph.keys())
 
     def update_graph(self, new_tags):
+        if new_tags is None:
+            return
         # Add new tags and remove the oldest tags if the limit is reached
         for tag in new_tags:
             self.add_tag(tag)
@@ -81,9 +83,6 @@ class MusicGraph:
         return self.latest_songs
             
     def get_tags_for_song(self, song, artist):
-        self.latest_songs.append((song, artist))
-        if len(self.latest_songs) > 5:
-            self.latest_songs.pop(0)
 
         print("Currently getting tags for song")
         params = {
@@ -95,7 +94,13 @@ class MusicGraph:
         }
         response = requests.get("http://ws.audioscrobbler.com/2.0/", params=params)
         data = response.json()
-        return [tag["name"] for tag in data["toptags"]["tag"]][:self.max_tags_per_song]
+        if 'toptags' in data:
+            self.latest_songs.append((song, artist))
+            if len(self.latest_songs) > 5:
+                self.latest_songs.pop(0)
+            return [tag["name"] for tag in data["toptags"]["tag"]][:self.max_tags_per_song]
+        else:
+            return None
 
     def dijkstra(self, start_tag):
         unvisited = {tag: float('inf') for tag in self.graph}
